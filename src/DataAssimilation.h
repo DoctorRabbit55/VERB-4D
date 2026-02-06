@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Bernhard Haas (GFZ)
+ * SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -74,7 +74,7 @@ private:
 class LocalFilesDataSource : public DataSource {
 public:
     LocalFilesDataSource(const std::string& satellite_lst_file, 
-            size_t size_q1, size_t size_q2, size_t size_q3, size_t size_q4);
+            int size_q1, int size_q2, int size_q3, int size_q4);
 
     virtual Matrix4D<double> getObservations(
         const double timeStart, const double timeEnd,

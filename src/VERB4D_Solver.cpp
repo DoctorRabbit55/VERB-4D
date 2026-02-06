@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2015 UCLA
-// SPDX-FileCopyrightText: 2025 Bernhard Haas (GFZ)
+// SPDX-FileCopyrightText: 2025 GFZ Helmholtz Centre for Geosciences
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
@@ -126,11 +126,6 @@
 #include <string>
 #include <thread>
 
-// enable alternative tokens
-#ifdef _MSC_VER
-    #include<iso646.h>
-#endif
-
 #include "Convection_2D.h"
 #include "Convection_3D.h"
 #include "Diffusion_1D.h"
@@ -147,6 +142,10 @@
 
 #ifdef DATA_ASSIMILATION
 #include "DataAssimilation.h"
+#endif
+
+#ifdef USE_PPFV
+#include "Diffusion_2D_PPFV.h"
 #endif
 
 using namespace std;
@@ -1170,7 +1169,19 @@ int main(int argc, char *argv[])
                                           Vl_BC_type, Vu_BC_type, Kl_BC_type, Ku_BC_type, DVV.wxSlice(iP, iR),
                                           DKK.wxSlice(iP, iR), DVK.wxSlice(iP, iR), DVK.wxSlice(iP, iR), G_local.wxSlice(iP, iR),
                                           Sources.wxSlice(iP, iR) * local_sources, Losses_local.wxSlice(iP, iR), dt);
-                    } else {
+                    } else if (inversion_method == InversionMethod::PPFV) {
+#ifdef USE_PPFV
+                        Diffusion_2D_PPFV(PSD_IK, V.wxzSlice(iP, iR, 0), K.wxySlice(iP, iR, 0), V_size, K_size,
+                            Vl_BC.xySlice(iP, iR), Vu_BC.xySlice(iP, iR),  // P, R, K
+                            Kl_BC.xySlice(iP, iR), Ku_BC.xySlice(iP, iR),  // P, R, I
+                            Vl_BC_type, Vu_BC_type, Kl_BC_type, Ku_BC_type, DVV.wxSlice(iP, iR),
+                            DKK.wxSlice(iP, iR), DVK.wxSlice(iP, iR), G_local.wxSlice(iP, iR),
+                            Sources.wxSlice(iP, iR) * local_sources, Losses_local.wxSlice(iP, iR), dt, sub_dt_diffusion);
+#else
+                        Logger::error << "Error: PPFV method is not available, please recompile with PPFV option!" << std::endl;
+                        exit(EXIT_FAILURE);
+#endif
+                        } else {
                         Logger::error << "Error: Unknown inversion method!" << std::endl;
                     }
 
@@ -1230,9 +1241,7 @@ int main(int argc, char *argv[])
             // Wait until the writing of the last output file is finished
             output_writer.wait();
 
-            // Clear the stream
-            PSD_filename.str("");    // Clear content
-            PSD_filename.clear();    // Reset state flags
+            std::ostringstream PSD_filename;
             PSD_filename << outputFolder << "PSD_" << std::setw(5) << std::setfill('0') << int(it / output_step);
 
             Logger::debug << std::endl
